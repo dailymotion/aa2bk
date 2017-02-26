@@ -1,0 +1,32 @@
+<idea-plugin version="2">
+  <id>com.dailymotion.aa2bk</id>
+  <name>aa2bk</name>
+  <version>1.0</version>
+  <vendor email="support@dailymotion.com" url="http://www.dailymotion.com">Dailymotion</vendor>
+
+  <description>Recognizes all the classes using the @EViewgroup annotation and modify them to use their equivalent butterknife counterpart</description>
+
+  <change-notes>
+  </change-notes>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+  <idea-version since-build="145.0"/>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+       on how to target different products -->
+  <!-- uncomment to enable plugin in all products
+  <depends>com.intellij.modules.lang</depends>
+  -->
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- Add your extensions here -->
+  </extensions>
+
+  <actions>
+    <group id="MyPlugin.Dailymotion" text="_Dailymotion" description="Dailymotion stuff">
+      <add-to-group group-id="MainMenu" anchor="last"  />
+      <action id="Myplugin.DoStuff" class="com.dailymotion.aa2bk.AA2BK" text="_Do the magic stuff" description="magic happens here" />
+    </group>
+  </actions>
+
+</idea-plugin>
