@@ -58,6 +58,14 @@ public class Util {
         return null;
     }
 
+    public static String getAnnotationParameter(PsiAnnotation annotation) {
+        PsiElement psiNameValuePair = Util.findElement(annotation, PsiNameValuePair.class);
+        if (psiNameValuePair == null) {
+            return null;
+        }
+
+        return psiNameValuePair.getText();
+    }
     public  static <T extends PsiElement> T findElement(PsiElement psiElement, Class<T> clazz) {
 
         List<T> list = findElements(psiElement, clazz);

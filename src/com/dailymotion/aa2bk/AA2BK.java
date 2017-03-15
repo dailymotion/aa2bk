@@ -22,14 +22,11 @@ public class AA2BK extends AnAction {
         System.out.println("processClass " + psiClass);
 
         PsiAnnotation psiAnnotation = Util.getAnnotation(psiClass, "EViewGroup");
-
-        PsiElement psiNameValuePair = Util.findElement(psiAnnotation, PsiNameValuePair.class);
-        if (psiNameValuePair == null) {
+        String layoutId = Util.getAnnotationParameter(psiAnnotation);
+        if (layoutId == null) {
             System.err.println("cannot find layoutId for " + psiClass);
             return;
         }
-
-        String layoutId = psiNameValuePair.getText();
         psiAnnotation.delete();
 
         String body = String.format("" +
@@ -48,6 +45,8 @@ public class AA2BK extends AnAction {
         for (PsiElement child : psiClass.getChildren()) {
             if (child instanceof PsiField) {
                 processField((PsiField) child);
+            } else if (child instanceof PsiMethod) {
+                processMethod((PsiMethod)child);
             }
         }
 
@@ -77,7 +76,13 @@ public class AA2BK extends AnAction {
             onFinishInflatePsiMethod = (PsiMethod) psiClass.add(onFinishInflatePsiMethod);
         }
 
-        PsiCodeBlock codeBlock = Util.findElement(onFinishInflatePsiMethod, PsiCodeBlock.class);
+        PsiCodeBlock codeBlock = null;
+        for (PsiElement element: onFinishInflatePsiMethod.getChildren()) {
+            if (element instanceof PsiCodeBlock) {
+                codeBlock = (PsiCodeBlock) element;
+                break;
+            }
+        }
         codeBlock.addAfter(JavaPsiFacade.getElementFactory(mProject).createStatementFromText("ButterKnife.bind(this);", psiClass), codeBlock.getLastBodyElement());
         try {
             Util.addImportIfNeeded(mProject, psiClass.getContainingFile(), "butterknife.ButterKnife");
@@ -87,7 +92,13 @@ public class AA2BK extends AnAction {
         }
 
         if (afterViewsPsiMethod != null) {
-            PsiCodeBlock codeBlock1 = Util.findElement(afterViewsPsiMethod, PsiCodeBlock.class);
+            PsiCodeBlock codeBlock1 = null;
+            for (PsiElement element: afterViewsPsiMethod.getChildren()) {
+                if (element instanceof PsiCodeBlock) {
+                    codeBlock1 = (PsiCodeBlock) element;
+                    break;
+                }
+            }
             for (int i = 1; i < codeBlock1.getChildren().length - 1; i++) {
                 codeBlock.addAfter(codeBlock1.getChildren()[i], codeBlock.getLastBodyElement());
             }
@@ -99,28 +110,48 @@ public class AA2BK extends AnAction {
         mProcessedQualifedNames.add(psiClass.getQualifiedName());
     }
 
-    private void processField(PsiField psiField) {
-        List<PsiAnnotation> annotationList = Util.findElements(psiField, PsiAnnotation.class);
-        PsiAnnotation annotation = null;
+    private void processMethod(PsiMethod psiMethod) {
+        List<PsiAnnotation> annotationList = Util.findElements(psiMethod, PsiAnnotation.class);
 
-        for (PsiElement element : annotationList) {
-            if (element.getText().equals("@ViewById")) {
-                annotation = (PsiAnnotation) element;
-                break;
+        for (PsiAnnotation annotation : annotationList) {
+            String annotationName = Util.getAnnotationName(annotation);
+            String resourceName = Util.getAnnotationParameter(annotation);
+
+            if (annotationName.equals("Click")) {
+                if (resourceName != null) {
+                    String a = String.format("@OnClick(%s)", resourceName);
+                    PsiAnnotation newAnnotation = JavaPsiFacade.getInstance(mProject).getElementFactory().createAnnotationFromText(a, psiMethod);
+                    annotation.replace(newAnnotation);
+
+                    Util.addImportIfNeeded(mProject, psiMethod.getContainingFile(), "butterknife.OnClick");
+                    return;
+                }
             }
         }
+    }
 
-        if (annotation == null) {
-            return;
-        }
+    private void processField(PsiField psiField) {
+        List<PsiAnnotation> annotationList = Util.findElements(psiField, PsiAnnotation.class);
 
-        for (PsiElement child : psiField.getChildren()) {
-            if (child instanceof PsiIdentifier) {
-                String fieldName = child.getText();
-                String a = String.format("@BindView(R.id.%s)", fieldName);
-                PsiAnnotation newAnnotation = JavaPsiFacade.getInstance(mProject).getElementFactory().createAnnotationFromText(a, psiField);
-                annotation.replace(newAnnotation);
-                return;
+        for (PsiAnnotation annotation : annotationList) {
+            String annotationName = Util.getAnnotationName(annotation);
+            String resourceName = Util.getAnnotationParameter(annotation);
+
+            if (annotationName.equals("ViewById")) {
+
+                for (PsiElement child : psiField.getChildren()) {
+                    if (child instanceof PsiIdentifier) {
+                        if (resourceName == null) {
+                            resourceName = "R.id." + child.getText();
+                        } else {
+                            System.out.println("explicit id: " + resourceName);
+                        }
+                        String a = String.format("@BindView(%s)", resourceName);
+                        PsiAnnotation newAnnotation = JavaPsiFacade.getInstance(mProject).getElementFactory().createAnnotationFromText(a, psiField);
+                        annotation.replace(newAnnotation);
+                        return;
+                    }
+                }
             }
         }
     }
